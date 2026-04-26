@@ -1,1 +1,97 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>問題</title>
+
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+<style>
+body { font-family: sans-serif; }
+#paper {
+  width: 800px;
+  margin: auto;
+  padding: 20px;
+  border: 1px solid black;
+}
+.q { margin: 6px 0; }
+
+@media print {
+  button { display: none; }
+}
+</style>
+</head>
+<body>
+
+<h1 style="text-align:center;">問題</h1>
+
+<div id="paper"></div>
+
+<div style="text-align:center; margin-top:20px;">
+  <button onclick="downloadJPEG()">JPEG保存</button>
+  <button onclick="window.print()">印刷</button>
+</div>
+
+<script>
+const params = new URLSearchParams(location.search);
+const start = parseInt(params.get("start"));
+const end = parseInt(params.get("end"));
+const mode = params.get("mode");
+const unit = params.get("unit");
+
+function shuffle(array){
+  for(let i = array.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+}
+
+fetch("words.json")
+.then(res => res.json())
+.then(words => {
+
+  let filtered = words.filter(w => {
+    const inRange = w.id >= start && w.id <= end;
+    const inUnit = (!unit || w.unit == unit);
+    return inRange && inUnit;
+  });
+
+  if(filtered.length === 0){
+    document.getElementById("paper").textContent = "問題が見つかりません";
+    return;
+  }
+
+  shuffle(filtered);
+
+  const selected = filtered.slice(0, 50);
+
+  const paper = document.getElementById("paper");
+
+  selected.forEach((w, i) => {
+    const div = document.createElement("div");
+    div.className = "q";
+
+    if(mode === "enToJa"){
+      div.textContent = (i+1) + ". " + w.en;
+    }else{
+      div.textContent = (i+1) + ". " + w.ja;
+    }
+
+    paper.appendChild(div);
+  });
+
+});
+
+function downloadJPEG(){
+  html2canvas(document.getElementById("paper")).then(canvas=>{
+    const link = document.createElement("a");
+    link.download = "test.jpg";
+    link.href = canvas.toDataURL("image/jpeg");
+    link.click();
+  });
+}
+</script>
+
+</body>
+</html>
 
