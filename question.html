@@ -68,8 +68,8 @@ fetch("words.json")
   }
 
   shuffle(filtered);
-  const selected = filtered.slice(0, 50);
-  selected.sort((a, b) => a.id - b.id);
+  let selected = filtered.slice(0, 50);
+    selected.sort((a, b) => a.id - b.id);
   const paper = document.getElementById("paper");
 
   selected.forEach((w, i) => {
