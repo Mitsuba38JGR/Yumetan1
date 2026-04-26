@@ -14,7 +14,13 @@ body { font-family: sans-serif; }
   padding: 20px;
   border: 1px solid black;
 }
-.q { margin: 6px 0; }
+.q { margin: 10px 0; }
+
+input {
+  font-size: 16px;
+  padding: 4px;
+  margin-top: 4px;
+}
 
 @media print {
   button { display: none; }
@@ -28,8 +34,10 @@ body { font-family: sans-serif; }
 <div id="paper"></div>
 
 <div style="text-align:center; margin-top:20px;">
+  <button onclick="checkAnswers()">答え合わせ</button>
   <button onclick="downloadJPEG()">JPEG保存</button>
   <button onclick="window.print()">印刷</button>
+  <p id="score"></p>
 </div>
 
 <script>
@@ -37,8 +45,8 @@ const params = new URLSearchParams(location.search);
 const start = parseInt(params.get("start"));
 const end = parseInt(params.get("end"));
 const mode = params.get("mode");
-const unit = params.get("unit");
 
+// シャッフル
 function shuffle(array){
   for(let i = array.length - 1; i > 0; i--){
     const j = Math.floor(Math.random() * (i + 1));
@@ -51,9 +59,7 @@ fetch("words.json")
 .then(words => {
 
   let filtered = words.filter(w => {
-    const inRange = w.id >= start && w.id <= end;
-    const inUnit = (!unit || w.unit == unit);
-    return inRange && inUnit;
+    return w.id >= start && w.id <= end && w.en && w.ja;
   });
 
   if(filtered.length === 0){
@@ -62,7 +68,6 @@ fetch("words.json")
   }
 
   shuffle(filtered);
-
   const selected = filtered.slice(0, 50);
 
   const paper = document.getElementById("paper");
@@ -71,17 +76,60 @@ fetch("words.json")
     const div = document.createElement("div");
     div.className = "q";
 
-    if(mode === "enToJa"){
-      div.textContent = (i+1) + ". " + w.en;
-    }else{
-      div.textContent = (i+1) + ". " + w.ja;
-    }
+    const question = (mode === "enToJa") ? w.en : w.ja;
+    const answer = (mode === "enToJa") ? w.ja : w.en;
+
+    div.innerHTML = `
+      <div>${i+1}. ${question}</div>
+      <input type="text" id="ans${i}" data-answer="${answer}" placeholder="答えを入力">
+      <span id="result${i}"></span>
+    `;
 
     paper.appendChild(div);
+
+    // Enterで次へ
+    const input = div.querySelector("input");
+    input.addEventListener("keydown", e => {
+      if(e.key === "Enter"){
+        const next = document.getElementById("ans" + (i+1));
+        if(next) next.focus();
+      }
+    });
   });
 
 });
 
+// 判定
+function checkAnswers(){
+  let correct = 0;
+  const inputs = document.querySelectorAll("input[type='text']");
+
+  inputs.forEach((input, i) => {
+    const answer = input.dataset.answer.trim();
+    const user = input.value.trim();
+    const result = document.getElementById("result" + i);
+
+    if(user === ""){
+      result.textContent = " 未入力";
+      result.style.color = "gray";
+      return;
+    }
+
+    if(user.toLowerCase() === answer.toLowerCase()){
+      result.textContent = " ○";
+      result.style.color = "green";
+      correct++;
+    }else{
+      result.textContent = " × (" + answer + ")";
+      result.style.color = "red";
+    }
+  });
+
+  document.getElementById("score").textContent =
+    `正解数: ${correct} / ${inputs.length}`;
+}
+
+// JPEG
 function downloadJPEG(){
   html2canvas(document.getElementById("paper")).then(canvas=>{
     const link = document.createElement("a");
@@ -94,4 +142,3 @@ function downloadJPEG(){
 
 </body>
 </html>
-
