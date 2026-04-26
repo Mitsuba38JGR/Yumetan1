@@ -1,1 +1,62 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>単語テスト</title>
+<style>
+body { font-family: sans-serif; text-align: center; margin-top: 50px; }
+input, select { font-size: 16px; margin: 5px; }
+button { font-size: 18px; padding: 8px 16px; }
+</style>
+</head>
+<body>
 
+<h1>単語テスト生成</h1>
+
+<p>開始番号</p>
+<input type="number" id="start">
+
+<p>終了番号</p>
+<input type="number" id="end">
+
+<p>モード</p>
+<select id="mode">
+  <option value="enToJa">英 → 日</option>
+  <option value="jaToEn">日 → 英</option>
+</select>
+
+<p>Unit（任意）</p>
+<input type="number" id="unit" placeholder="空欄で全部">
+
+<br><br>
+<button onclick="go()">生成</button>
+
+<script>
+function go(){
+  const start = document.getElementById("start").value;
+  const end = document.getElementById("end").value;
+  const mode = document.getElementById("mode").value;
+  const unit = document.getElementById("unit").value;
+
+  if(start === "" || end === ""){
+    alert("範囲を入力して");
+    return;
+  }
+
+  if(Number(start) > Number(end)){
+    alert("開始は終了以下にして");
+    return;
+  }
+
+  let url = `question.html?start=${start}&end=${end}&mode=${mode}`;
+
+  if(unit !== ""){
+    url += `&unit=${unit}`;
+  }
+
+  location.href = url;
+}
+</script>
+
+</body>
+</html>
