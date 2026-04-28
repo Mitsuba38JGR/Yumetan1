@@ -1,39 +1,24 @@
-<!DOCTYPE html>
-<html lang="ja">
+<!DOCTYPE html><html lang="ja">
 <head>
 <meta charset="UTF-8">
 <title>問題</title>
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 <style>
-body { font-family: sans-serif; }
-#paper { width: 800px; margin: auto; padding: 20px; border: 1px solid black; }
-.q { margin: 10px 0; }
-input { font-size: 16px; padding: 4px; margin-top: 4px; }
-@media print { button { display: none; } }
+  body { font-family: sans-serif; }
+  .q { margin-bottom: 10px; }
+  input { margin-left: 10px; }
 </style>
 </head>
-<body>
-
-<h1 style="text-align:center;">問題</h1>
-<div id="paper"></div>
-
-<div style="text-align:center; margin-top:20px;">
-  <button onclick="checkAnswers()">答え合わせ</button>
-  <button onclick="downloadJPEG()">JPEG保存</button>
-  <button onclick="window.print()">印刷</button>
-  <p id="score"></p>
-</div>
-
-<script>
+<body><h2>テスト</h2>
+<div id="paper"></div><br>
+<button onclick="checkAnswers()">採点</button>
+<button onclick="downloadJPEG()">JPEG保存</button><p id="score"></p><script>
 const params = new URLSearchParams(location.search);
-const start = parseInt(params.get("start")) || 1;
-const end = parseInt(params.get("end")) || 9999;
+const start = parseInt(params.get("start"));
+const end = parseInt(params.get("end"));
 const mode = params.get("mode");
 
-function normalize(str){
-  return str.replace(/（.*?）/g, "").replace(/～/g, "").replace(/\s/g, "").trim().toLowerCase();
-}
-
+// シャッフル
 function shuffle(array){
   for(let i = array.length - 1; i > 0; i--){
     const j = Math.floor(Math.random() * (i + 1));
@@ -41,16 +26,21 @@ function shuffle(array){
   }
 }
 
+// 正規化（ひらがな・カタカナ・小文字）
+function normalize(str){
+  return str
+    .toLowerCase()
+    .replace(/[ァ-ン]/g, s => String.fromCharCode(s.charCodeAt(0) - 0x60)) // カタカナ→ひらがな
+    .replace(/\s+/g, ""); // 空白削除
+}
+
 fetch("words.json")
-.then(res => {
-  if(!res.ok) throw new Error("JSON読み込み失敗");
-  return res.json();
-})
+.then(res => res.json())
 .then(words => {
 
-  let filtered = words.filter(w =>
-    w.id >= start && w.id <= end && w.en && w.ja
-  );
+  let filtered = words.filter(w => {
+    return w.id >= start && w.id <= end && w.en && w.ja;
+  });
 
   if(filtered.length === 0){
     document.getElementById("paper").textContent = "問題が見つかりません";
@@ -58,9 +48,8 @@ fetch("words.json")
   }
 
   shuffle(filtered);
-  const selected = filtered.slice(0, Math.min(50, filtered.length));
+  const selected = filtered.slice(0, 50);
   selected.sort((a, b) => a.id - b.id);
-
   const paper = document.getElementById("paper");
 
   selected.forEach((w, i) => {
@@ -71,13 +60,14 @@ fetch("words.json")
     const answer = (mode === "enToJa") ? w.ja : w.en;
 
     div.innerHTML = `
-      <div>${i+1}. ${question}</div>
-      <input type="text" id="ans${i}" data-answer="${answer}" placeholder="答えを入力">
+      <span>${i+1}. ${question}</span>
+      <input type="text" id="ans${i}" data-answer="${answer}">
       <span id="result${i}"></span>
     `;
 
     paper.appendChild(div);
 
+    // Enterで次へ
     const input = div.querySelector("input");
     input.addEventListener("keydown", e => {
       if(e.key === "Enter"){
@@ -89,43 +79,48 @@ fetch("words.json")
 
 });
 
+// 採点
 function checkAnswers(){
   let correct = 0;
+  let partial = 0;
   const inputs = document.querySelectorAll("input[type='text']");
 
   inputs.forEach((input, i) => {
-    const rawAnswer = input.dataset.answer;
-    const user = input.value;
+    const answerRaw = input.dataset.answer;
+    const userRaw = input.value;
+
+    const answer = normalize(answerRaw);
+    const user = normalize(userRaw);
+
     const result = document.getElementById("result" + i);
 
-    if(user.trim() === ""){
+    if(user === ""){
       result.textContent = " 未入力";
       result.style.color = "gray";
       return;
     }
 
-    const answers = rawAnswer.split("|");
-    const u = normalize(user);
-
-    let isCorrect = answers.some(a => {
-      const na = normalize(a);
-      return na.includes(u) || u.includes(na);
-    });
-
-    if(isCorrect){
+    if(user === answer){
       result.textContent = " ○";
       result.style.color = "green";
       correct++;
-    }else{
-      result.textContent = " × (" + rawAnswer + ")";
+    }
+    else if(answer.includes(user) || user.includes(answer)){
+      result.textContent = " △ (" + answerRaw + ")";
+      result.style.color = "orange";
+      partial++;
+    }
+    else{
+      result.textContent = " × (" + answerRaw + ")";
       result.style.color = "red";
     }
   });
 
   document.getElementById("score").textContent =
-    `正解数: ${correct} / ${inputs.length}`;
+    `正解: ${correct} / ${inputs.length}　部分一致: ${partial}`;
 }
 
+// JPEG保存
 function downloadJPEG(){
   html2canvas(document.getElementById("paper")).then(canvas=>{
     const link = document.createElement("a");
@@ -134,7 +129,5 @@ function downloadJPEG(){
     link.click();
   });
 }
-</script>
-
-</body>
+</script></body>
 </html>
